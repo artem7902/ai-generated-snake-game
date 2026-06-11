@@ -1,0 +1,13 @@
+---
+description: Require Tailwind styling for React components
+globs: **/*.tsx
+alwaysApply: false
+---
+
+# Tailwind React Component Styling
+
+- Style React and React Native components with Tailwind utility classes.
+- Do not add new `StyleSheet.create(...)` blocks or inline style objects for component layout, spacing, color, typography, or borders.
+- Prefer `className` utilities on JSX elements. If React Native needs Tailwind support, use the project's configured Tailwind adapter such as NativeWind.
+- Keep non-visual values in constants only when they represent game or domain behavior, not component styling.
+- Use imperative style props only when required by a third-party API, animation, or runtime-computed value that cannot be represented clearly with Tailwind utilities.
