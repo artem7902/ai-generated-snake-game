@@ -4,6 +4,7 @@ import { GameStatus } from '../game/types';
 
 interface ScoreBarProps {
   score: number;
+  highScore: number;
   status: GameStatus;
   difficultyLabel: string;
   onPauseToggle: () => void;
@@ -11,6 +12,7 @@ interface ScoreBarProps {
 
 export function ScoreBar({
   score,
+  highScore,
   status,
   difficultyLabel,
   onPauseToggle,
@@ -25,6 +27,15 @@ export function ScoreBar({
         </Text>
         <Text className="font-mono text-xl font-bold text-[#39ff14]">
           {score.toString().padStart(3, '0')}
+        </Text>
+      </View>
+
+      <View className="items-center">
+        <Text className="font-mono text-[10px] tracking-[2px] text-[#8a9a8a]">
+          BEST
+        </Text>
+        <Text className="font-mono text-lg font-bold text-[#c8d6c8]">
+          {highScore.toString().padStart(3, '0')}
         </Text>
         <Text className="mt-0.5 font-mono text-[10px] text-[#8a9a8a]">
           {difficultyLabel}
