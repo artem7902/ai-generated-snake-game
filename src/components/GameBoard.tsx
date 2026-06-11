@@ -14,6 +14,7 @@ const EMPTY_CELL_CLASS_NAME = 'bg-[#16213e]';
 const SNAKE_BODY_CLASS_NAME = 'bg-[#2ecc40]';
 const SNAKE_HEAD_CLASS_NAME = 'bg-[#39ff14] border-2 border-[#c8ffc8]';
 const FOOD_CLASS_NAME = 'bg-[#f5f5dc] rounded-full scale-75';
+const COLLISION_CELL_CLASS_NAME = 'bg-[#ff3131] border-2 border-[#ffd1d1]';
 
 function getHeadCornerClass(direction: Direction): string {
   switch (direction) {
@@ -36,6 +37,9 @@ export function GameBoard({ snapshot, cellSize }: GameBoardProps) {
   const headKey =
     snapshot.snakeBody.length > 0 ? positionKey(snapshot.snakeBody[0]) : '';
   const foodKey = positionKey(snapshot.food);
+  const collisionKey = snapshot.collisionPosition
+    ? positionKey(snapshot.collisionPosition)
+    : '';
   const headCornerClass = getHeadCornerClass(snapshot.direction);
 
   const rows = useMemo(
@@ -47,15 +51,27 @@ export function GameBoard({ snapshot, cellSize }: GameBoardProps) {
             visualY === 0 ||
             visualX === snapshot.gridWidth + 1 ||
             visualY === snapshot.gridHeight + 1;
+          const key = positionKey({ x: visualX - 1, y: visualY - 1 });
 
           if (isWall) {
-            return { className: WALL_CELL_CLASS_NAME, key: `wall-${visualX}-${visualY}` };
+            return {
+              className:
+                key === collisionKey
+                  ? COLLISION_CELL_CLASS_NAME
+                  : WALL_CELL_CLASS_NAME,
+              key: `wall-${visualX}-${visualY}`,
+            };
           }
 
           const x = visualX - 1;
           const y = visualY - 1;
-          const key = positionKey({ x, y });
 
+          if (key === collisionKey) {
+            return {
+              className: COLLISION_CELL_CLASS_NAME,
+              key: `collision-${x}-${y}`,
+            };
+          }
           if (key === headKey) {
             return {
               className: `${SNAKE_HEAD_CLASS_NAME} ${headCornerClass}`,
@@ -76,6 +92,7 @@ export function GameBoard({ snapshot, cellSize }: GameBoardProps) {
       snapshot.gridWidth,
       headKey,
       foodKey,
+      collisionKey,
       snakeSet,
       headCornerClass,
     ],

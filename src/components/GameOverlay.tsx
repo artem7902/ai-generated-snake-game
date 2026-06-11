@@ -1,12 +1,13 @@
 import { Pressable, Text, View } from 'react-native';
 import { DifficultyPicker } from './DifficultyPicker';
 import { Difficulty } from '../game/constants';
-import { GameStatus } from '../game/types';
+import { GameOverReason, GameStatus } from '../game/types';
 
 interface GameOverlayProps {
   status: GameStatus;
   score: number;
   highScore: number;
+  gameOverReason: GameOverReason | null;
   difficulty: Difficulty;
   onDifficultyChange: (difficulty: Difficulty) => void;
   onRestart: () => void;
@@ -17,6 +18,7 @@ export function GameOverlay({
   status,
   score,
   highScore,
+  gameOverReason,
   difficulty,
   onDifficultyChange,
   onRestart,
@@ -60,14 +62,26 @@ export function GameOverlay({
 
   if (status === 'gameOver') {
     const isNewBest = score >= highScore && score > 0;
+    const collisionMessage =
+      gameOverReason === 'wall'
+        ? 'Wall hit'
+        : gameOverReason === 'self'
+          ? 'Bit yourself'
+          : 'Collision';
 
     return (
       <Pressable
-        className="absolute inset-0 items-center justify-center bg-black/80 p-4"
+        className="absolute inset-0 items-center justify-center bg-black/60 p-4"
         onPress={onRestart}
       >
         <Text className="mb-2 font-mono text-2xl font-bold text-[#f5f5dc]">
           GAME OVER
+        </Text>
+        <Text className="mb-2 rounded-full border border-[#ffd1d1] bg-[#ff3131] px-3 py-1 font-mono text-sm font-bold uppercase tracking-[3px] text-white">
+          {collisionMessage}
+        </Text>
+        <Text className="mb-3 text-center font-mono text-xs text-[#c8d6c8]">
+          Red marks the crash
         </Text>
         <Text className="font-mono text-base text-[#c8d6c8]">
           Score: {score.toString().padStart(3, '0')}

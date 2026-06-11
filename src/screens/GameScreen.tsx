@@ -231,6 +231,7 @@ export function GameScreen() {
             status={snapshot.status}
             score={snapshot.score}
             highScore={highScore}
+            gameOverReason={snapshot.gameOverReason}
             difficulty={difficulty}
             onDifficultyChange={handleDifficultyChange}
             onRestart={handleRestart}

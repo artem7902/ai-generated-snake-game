@@ -9,7 +9,7 @@ import { Direction } from './Direction';
 import { Food } from './Food';
 import { Position } from './Position';
 import { Snake } from './Snake';
-import { GameSnapshot, GameStatus } from './types';
+import { GameOverReason, GameSnapshot, GameStatus } from './types';
 
 export class GameEngine {
   private board: Board;
@@ -18,6 +18,8 @@ export class GameEngine {
   private score: number;
   private status: GameStatus;
   private difficulty: Difficulty;
+  private gameOverReason: GameOverReason | null;
+  private collisionPosition: Position | null;
 
   constructor(difficulty: Difficulty = Difficulty.Normal) {
     this.difficulty = difficulty;
@@ -26,6 +28,8 @@ export class GameEngine {
     this.food = new Food({ x: 0, y: 0 });
     this.score = 0;
     this.status = 'idle';
+    this.gameOverReason = null;
+    this.collisionPosition = null;
     this.food.spawn(this.board, this.snake.getBody());
   }
 
@@ -73,6 +77,8 @@ export class GameEngine {
     this.food = new Food({ x: 0, y: 0 });
     this.score = 0;
     this.status = 'idle';
+    this.gameOverReason = null;
+    this.collisionPosition = null;
     this.food.spawn(this.board, this.snake.getBody());
   }
 
@@ -93,6 +99,8 @@ export class GameEngine {
 
     if (!this.board.isInside(nextHead)) {
       this.status = 'gameOver';
+      this.gameOverReason = 'wall';
+      this.collisionPosition = nextHead;
       return;
     }
 
@@ -100,6 +108,8 @@ export class GameEngine {
 
     if (this.snake.willCollideWithSelf(nextHead, ateFood)) {
       this.status = 'gameOver';
+      this.gameOverReason = 'self';
+      this.collisionPosition = nextHead;
       return;
     }
 
@@ -121,6 +131,10 @@ export class GameEngine {
       gridWidth: this.board.width,
       gridHeight: this.board.height,
       difficulty: this.difficulty,
+      gameOverReason: this.gameOverReason,
+      collisionPosition: this.collisionPosition
+        ? { ...this.collisionPosition }
+        : null,
     };
   }
 

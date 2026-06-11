@@ -3,6 +3,7 @@ import { Direction } from './Direction';
 import { Position } from './Position';
 
 export type GameStatus = 'idle' | 'running' | 'paused' | 'gameOver';
+export type GameOverReason = 'wall' | 'self';
 
 export interface GameSnapshot {
   status: GameStatus;
@@ -13,4 +14,6 @@ export interface GameSnapshot {
   gridWidth: number;
   gridHeight: number;
   difficulty: Difficulty;
+  gameOverReason: GameOverReason | null;
+  collisionPosition: Position | null;
 }
