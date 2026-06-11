@@ -1,7 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Platform, Text, View } from 'react-native';
+import {
+  LayoutChangeEvent,
+  Platform,
+  Text,
+  useWindowDimensions,
+  View,
+} from 'react-native';
+import { computeCellSize, GameBoard } from '../components/GameBoard';
 import { DPadControls } from '../components/DPadControls';
-import { GameBoard } from '../components/GameBoard';
 import { GameOverlay } from '../components/GameOverlay';
 import { getDifficultyLabel, ScoreBar } from '../components/ScoreBar';
 import { SwipeControls } from '../components/SwipeControls';
@@ -38,8 +44,10 @@ const KEY_TO_DIRECTION: Record<string, Direction> = {
 const PAUSE_KEYS = new Set([' ', 'p', 'P', 'Escape']);
 
 export function GameScreen() {
+  const { width: windowWidth, height: windowHeight } = useWindowDimensions();
   const [difficulty, setDifficulty] = useState(Difficulty.Normal);
   const [highScore, setHighScore] = useState(0);
+  const [boardAreaSize, setBoardAreaSize] = useState({ width: 0, height: 0 });
   const [statsLoaded, setStatsLoaded] = useState(false);
 
   const engineRef = useRef(new GameEngine(Difficulty.Normal));
@@ -150,6 +158,11 @@ export function GameScreen() {
     [syncSnapshot],
   );
 
+  const handleBoardAreaLayout = useCallback((event: LayoutChangeEvent) => {
+    const { width, height } = event.nativeEvent.layout;
+    setBoardAreaSize({ width, height });
+  }, []);
+
   useEffect(() => {
     if (Platform.OS !== 'web') {
       return;
@@ -176,6 +189,21 @@ export function GameScreen() {
   const directionInputDisabled =
     snapshot.status === 'gameOver' || snapshot.status === 'paused';
 
+  const cellSize =
+    boardAreaSize.width > 0
+      ? computeCellSize(
+          boardAreaSize.width,
+          boardAreaSize.height || windowHeight * 0.45,
+          snapshot.gridWidth,
+          snapshot.gridHeight,
+        )
+      : computeCellSize(
+          windowWidth - 32,
+          windowHeight * 0.45,
+          snapshot.gridWidth,
+          snapshot.gridHeight,
+        );
+
   return (
     <View className="flex-1 items-center justify-center bg-[#1a1a2e] p-4">
       <Text className="mb-2 font-mono text-[28px] font-bold tracking-[6px] text-[#39ff14]">
@@ -190,21 +218,26 @@ export function GameScreen() {
         onPauseToggle={handlePauseToggle}
       />
 
-      <SwipeControls
-        onDirection={handleDirection}
-        disabled={directionInputDisabled}
+      <View
+        className="w-full max-w-md flex-1 items-center justify-center"
+        onLayout={handleBoardAreaLayout}
       >
-        <GameBoard snapshot={snapshot} />
-        <GameOverlay
-          status={snapshot.status}
-          score={snapshot.score}
-          highScore={highScore}
-          difficulty={difficulty}
-          onDifficultyChange={handleDifficultyChange}
-          onRestart={handleRestart}
-          onResume={handleResume}
-        />
-      </SwipeControls>
+        <SwipeControls
+          onDirection={handleDirection}
+          disabled={directionInputDisabled}
+        >
+          <GameBoard snapshot={snapshot} cellSize={cellSize} />
+          <GameOverlay
+            status={snapshot.status}
+            score={snapshot.score}
+            highScore={highScore}
+            difficulty={difficulty}
+            onDifficultyChange={handleDifficultyChange}
+            onRestart={handleRestart}
+            onResume={handleResume}
+          />
+        </SwipeControls>
+      </View>
 
       <DPadControls
         onDirection={handleDirection}
