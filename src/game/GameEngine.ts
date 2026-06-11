@@ -1,13 +1,14 @@
 import { Board } from './Board';
-import { Direction } from './Direction';
-import { Food } from './Food';
-import { Position } from './Position';
-import { Snake } from './Snake';
 import {
+  Difficulty,
   GRID_HEIGHT,
   GRID_WIDTH,
   INITIAL_SNAKE_LENGTH,
 } from './constants';
+import { Direction } from './Direction';
+import { Food } from './Food';
+import { Position } from './Position';
+import { Snake } from './Snake';
 import { GameSnapshot, GameStatus } from './types';
 
 export class GameEngine {
@@ -16,14 +17,27 @@ export class GameEngine {
   private food: Food;
   private score: number;
   private status: GameStatus;
+  private difficulty: Difficulty;
 
-  constructor() {
+  constructor(difficulty: Difficulty = Difficulty.Normal) {
+    this.difficulty = difficulty;
     this.board = new Board(GRID_WIDTH, GRID_HEIGHT);
     this.snake = new Snake(this.getStartPosition(), INITIAL_SNAKE_LENGTH);
     this.food = new Food({ x: 0, y: 0 });
     this.score = 0;
     this.status = 'idle';
     this.food.spawn(this.board, this.snake.getBody());
+  }
+
+  getDifficulty(): Difficulty {
+    return this.difficulty;
+  }
+
+  setDifficulty(difficulty: Difficulty): void {
+    if (this.status === 'running' || this.status === 'paused') {
+      return;
+    }
+    this.difficulty = difficulty;
   }
 
   start(): void {
@@ -36,6 +50,20 @@ export class GameEngine {
   pause(): void {
     if (this.status === 'running') {
       this.status = 'paused';
+    }
+  }
+
+  resume(): void {
+    if (this.status === 'paused') {
+      this.status = 'running';
+    }
+  }
+
+  togglePause(): void {
+    if (this.status === 'running') {
+      this.pause();
+    } else if (this.status === 'paused') {
+      this.resume();
     }
   }
 
@@ -68,12 +96,13 @@ export class GameEngine {
       return;
     }
 
-    if (this.snake.willCollideWithSelf(nextHead)) {
+    const ateFood = this.food.isEatenBy(nextHead);
+
+    if (this.snake.willCollideWithSelf(nextHead, ateFood)) {
       this.status = 'gameOver';
       return;
     }
 
-    const ateFood = this.food.isEatenBy(nextHead);
     this.snake.move(ateFood);
 
     if (ateFood) {
@@ -91,7 +120,12 @@ export class GameEngine {
       direction: this.snake.getDirection(),
       gridWidth: this.board.width,
       gridHeight: this.board.height,
+      difficulty: this.difficulty,
     };
+  }
+
+  getSnakeLength(): number {
+    return this.snake.getLength();
   }
 
   private getStartPosition(): Position {

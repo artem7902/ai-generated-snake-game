@@ -1,3 +1,4 @@
+import { Difficulty } from './constants';
 import { Direction } from './Direction';
 import { Position } from './Position';
 
@@ -11,4 +12,5 @@ export interface GameSnapshot {
   direction: Direction;
   gridWidth: number;
   gridHeight: number;
+  difficulty: Difficulty;
 }

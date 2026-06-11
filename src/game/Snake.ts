@@ -47,8 +47,11 @@ export class Snake {
     return { x: head.x + dx, y: head.y + dy };
   }
 
-  willCollideWithSelf(nextHead: Position): boolean {
-    return this.body.some((segment) => positionKey(segment) === positionKey(nextHead));
+  willCollideWithSelf(nextHead: Position, willGrow: boolean): boolean {
+    const bodyToCheck = willGrow ? this.body : this.body.slice(0, -1);
+    return bodyToCheck.some(
+      (segment) => positionKey(segment) === positionKey(nextHead),
+    );
   }
 
   move(grow: boolean): void {
@@ -60,7 +63,11 @@ export class Snake {
     }
   }
 
-  reset(startPosition: Position, initialLength: number, initialDirection: Direction): void {
+  reset(
+    startPosition: Position,
+    initialLength: number,
+    initialDirection: Direction,
+  ): void {
     this.direction = initialDirection;
     this.body = [];
 

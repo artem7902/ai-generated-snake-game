@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Platform, Pressable, Text, View } from 'react-native';
+import { Platform, Text, View } from 'react-native';
 import { DPadControls } from '../components/DPadControls';
 import { GameBoard } from '../components/GameBoard';
-import { ScoreBar } from '../components/ScoreBar';
+import { GameOverlay } from '../components/GameOverlay';
+import { getDifficultyLabel, ScoreBar } from '../components/ScoreBar';
+import { DIFFICULTY_TICK_MS, Difficulty } from '../game/constants';
 import { Direction } from '../game/Direction';
 import { GameEngine } from '../game/GameEngine';
-import { TICK_INTERVAL_MS } from '../game/constants';
-import { GameSnapshot } from '../game/types';
 
 const KEY_TO_DIRECTION: Record<string, Direction> = {
   ArrowUp: Direction.Up,
@@ -15,11 +15,12 @@ const KEY_TO_DIRECTION: Record<string, Direction> = {
   ArrowRight: Direction.Right,
 };
 
+const PAUSE_KEYS = new Set([' ', 'p', 'P', 'Escape']);
+
 export function GameScreen() {
-  const engineRef = useRef(new GameEngine());
-  const [snapshot, setSnapshot] = useState<GameSnapshot>(() =>
-    engineRef.current.getSnapshot(),
-  );
+  const [difficulty, setDifficulty] = useState(Difficulty.Normal);
+  const engineRef = useRef(new GameEngine(Difficulty.Normal));
+  const [snapshot, setSnapshot] = useState(() => engineRef.current.getSnapshot());
 
   const syncSnapshot = useCallback(() => {
     setSnapshot(engineRef.current.getSnapshot());
@@ -33,19 +34,43 @@ export function GameScreen() {
     [syncSnapshot],
   );
 
+  const handlePauseToggle = useCallback(() => {
+    engineRef.current.togglePause();
+    syncSnapshot();
+  }, [syncSnapshot]);
+
+  const handleResume = useCallback(() => {
+    engineRef.current.resume();
+    syncSnapshot();
+  }, [syncSnapshot]);
+
   const handleRestart = useCallback(() => {
     engineRef.current.reset();
     syncSnapshot();
   }, [syncSnapshot]);
 
+  const handleDifficultyChange = useCallback(
+    (nextDifficulty: Difficulty) => {
+      setDifficulty(nextDifficulty);
+      engineRef.current.setDifficulty(nextDifficulty);
+      syncSnapshot();
+    },
+    [syncSnapshot],
+  );
+
   useEffect(() => {
+    engineRef.current.setDifficulty(difficulty);
+  }, [difficulty]);
+
+  useEffect(() => {
+    const tickMs = DIFFICULTY_TICK_MS[snapshot.difficulty];
     const intervalId = setInterval(() => {
       engineRef.current.tick();
       syncSnapshot();
-    }, TICK_INTERVAL_MS);
+    }, tickMs);
 
     return () => clearInterval(intervalId);
-  }, [syncSnapshot]);
+  }, [snapshot.difficulty, syncSnapshot]);
 
   useEffect(() => {
     if (Platform.OS !== 'web') {
@@ -53,6 +78,12 @@ export function GameScreen() {
     }
 
     const handleKeyDown = (event: KeyboardEvent) => {
+      if (PAUSE_KEYS.has(event.key)) {
+        event.preventDefault();
+        handlePauseToggle();
+        return;
+      }
+
       const direction = KEY_TO_DIRECTION[event.key];
       if (direction) {
         event.preventDefault();
@@ -62,48 +93,38 @@ export function GameScreen() {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [handleDirection]);
+  }, [handleDirection, handlePauseToggle]);
 
-  const isGameOver = snapshot.status === 'gameOver';
-  const controlsDisabled = isGameOver;
+  const dpadDisabled =
+    snapshot.status === 'gameOver' || snapshot.status === 'paused';
 
   return (
     <View className="flex-1 items-center justify-center bg-[#1a1a2e] p-4">
       <Text className="mb-2 font-mono text-[28px] font-bold tracking-[6px] text-[#39ff14]">
         SNAKE
       </Text>
-      <ScoreBar score={snapshot.score} />
+
+      <ScoreBar
+        score={snapshot.score}
+        status={snapshot.status}
+        difficultyLabel={getDifficultyLabel(snapshot.difficulty)}
+        onPauseToggle={handlePauseToggle}
+      />
 
       <View className="relative">
         <GameBoard snapshot={snapshot} />
-
-        {snapshot.status === 'idle' && (
-          <View className="absolute inset-0 items-center justify-center bg-black/75 p-4">
-            <Text className="text-center font-mono text-base text-[#c8d6c8]">
-              Press a direction to start
-            </Text>
-          </View>
-        )}
-
-        {isGameOver && (
-          <Pressable
-            className="absolute inset-0 items-center justify-center bg-black/75 p-4"
-            onPress={handleRestart}
-          >
-            <Text className="mb-2 font-mono text-2xl font-bold text-[#f5f5dc]">
-              GAME OVER
-            </Text>
-            <Text className="text-center font-mono text-base text-[#c8d6c8]">
-              Score: {snapshot.score}
-            </Text>
-            <Text className="mt-3 font-mono text-sm text-[#39ff14]">
-              Tap to restart
-            </Text>
-          </Pressable>
-        )}
+        <GameOverlay
+          status={snapshot.status}
+          score={snapshot.score}
+          highScore={0}
+          difficulty={difficulty}
+          onDifficultyChange={handleDifficultyChange}
+          onRestart={handleRestart}
+          onResume={handleResume}
+        />
       </View>
 
-      <DPadControls onDirection={handleDirection} disabled={controlsDisabled} />
+      <DPadControls onDirection={handleDirection} disabled={dpadDisabled} />
     </View>
   );
 }
