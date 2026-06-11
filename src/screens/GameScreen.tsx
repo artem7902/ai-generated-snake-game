@@ -4,6 +4,7 @@ import { DPadControls } from '../components/DPadControls';
 import { GameBoard } from '../components/GameBoard';
 import { GameOverlay } from '../components/GameOverlay';
 import { getDifficultyLabel, ScoreBar } from '../components/ScoreBar';
+import { SwipeControls } from '../components/SwipeControls';
 import { DIFFICULTY_TICK_MS, Difficulty } from '../game/constants';
 import { Direction } from '../game/Direction';
 import { GameEngine } from '../game/GameEngine';
@@ -12,12 +13,26 @@ import {
   loadGameStats,
   recordGameResult,
 } from '../storage/GameStatsStore';
+import {
+  hapticDirection,
+  hapticFoodEaten,
+  hapticGameOver,
+  hapticPause,
+} from '../utils/haptics';
 
 const KEY_TO_DIRECTION: Record<string, Direction> = {
   ArrowUp: Direction.Up,
   ArrowDown: Direction.Down,
   ArrowLeft: Direction.Left,
   ArrowRight: Direction.Right,
+  w: Direction.Up,
+  W: Direction.Up,
+  s: Direction.Down,
+  S: Direction.Down,
+  a: Direction.Left,
+  A: Direction.Left,
+  d: Direction.Right,
+  D: Direction.Right,
 };
 
 const PAUSE_KEYS = new Set([' ', 'p', 'P', 'Escape']);
@@ -70,20 +85,26 @@ export function GameScreen() {
     const previous = previousSnapshotRef.current;
     const current = snapshot;
 
-    if (
-      previous &&
-      current.status === 'gameOver' &&
-      previous.status !== 'gameOver' &&
-      !gameOverRecordedRef.current
-    ) {
-      gameOverRecordedRef.current = true;
-      void recordGameResult(
-        current.score,
-        current.snakeBody.length,
-        current.difficulty,
-      ).then((stats) => {
-        setHighScore(stats.highScore);
-      });
+    if (previous) {
+      if (current.score > previous.score) {
+        hapticFoodEaten();
+      }
+
+      if (
+        current.status === 'gameOver' &&
+        previous.status !== 'gameOver' &&
+        !gameOverRecordedRef.current
+      ) {
+        gameOverRecordedRef.current = true;
+        hapticGameOver();
+        void recordGameResult(
+          current.score,
+          current.snakeBody.length,
+          current.difficulty,
+        ).then((stats) => {
+          setHighScore(stats.highScore);
+        });
+      }
     }
 
     if (current.status !== 'gameOver') {
@@ -96,6 +117,7 @@ export function GameScreen() {
   const handleDirection = useCallback(
     (direction: Direction) => {
       engineRef.current.setDirection(direction);
+      hapticDirection();
       syncSnapshot();
     },
     [syncSnapshot],
@@ -103,11 +125,13 @@ export function GameScreen() {
 
   const handlePauseToggle = useCallback(() => {
     engineRef.current.togglePause();
+    hapticPause();
     syncSnapshot();
   }, [syncSnapshot]);
 
   const handleResume = useCallback(() => {
     engineRef.current.resume();
+    hapticPause();
     syncSnapshot();
   }, [syncSnapshot]);
 
@@ -149,7 +173,7 @@ export function GameScreen() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [handleDirection, handlePauseToggle]);
 
-  const dpadDisabled =
+  const directionInputDisabled =
     snapshot.status === 'gameOver' || snapshot.status === 'paused';
 
   return (
@@ -166,7 +190,10 @@ export function GameScreen() {
         onPauseToggle={handlePauseToggle}
       />
 
-      <View className="relative">
+      <SwipeControls
+        onDirection={handleDirection}
+        disabled={directionInputDisabled}
+      >
         <GameBoard snapshot={snapshot} />
         <GameOverlay
           status={snapshot.status}
@@ -177,9 +204,18 @@ export function GameScreen() {
           onRestart={handleRestart}
           onResume={handleResume}
         />
-      </View>
+      </SwipeControls>
 
-      <DPadControls onDirection={handleDirection} disabled={dpadDisabled} />
+      <DPadControls
+        onDirection={handleDirection}
+        disabled={directionInputDisabled}
+      />
+
+      <Text className="mt-3 text-center font-mono text-[10px] text-[#8a9a8a]">
+        {Platform.OS === 'web'
+          ? 'Arrows / WASD to move · Space or P to pause'
+          : 'Swipe on board or use D-pad · Pause button to pause'}
+      </Text>
     </View>
   );
 }

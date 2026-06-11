@@ -29,7 +29,7 @@ export function GameOverlay({
           READY?
         </Text>
         <Text className="text-center font-mono text-sm text-[#c8d6c8]">
-          Press a direction to start
+          Press a direction or swipe to start
         </Text>
         <Text className="mt-2 font-mono text-xs text-[#8a9a8a]">
           Best: {highScore.toString().padStart(3, '0')}
